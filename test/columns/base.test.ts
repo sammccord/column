@@ -48,12 +48,12 @@ class TestColumn extends BaseColumn<string> {
   async deserialize(data: Uint8Array): Promise<void> {
     const json = new TextDecoder().decode(data);
     const { entries, fillList } = JSON.parse(json);
-    
+
     this.data.clear();
     for (const [index, value] of entries) {
       this.data.set(index, value);
     }
-    
+
     // Restore fill list
     this.fillList.clear();
     for (const index of fillList) {
@@ -101,7 +101,7 @@ describe("BaseColumn", () => {
     test("should set and get values", async () => {
       await column.set(0, "hello");
       await column.set(100, "world");
-      
+
       expect(await column.get(0)).toBe("hello");
       expect(await column.get(100)).toBe("world");
       expect(await column.get(50)).toBeUndefined();
@@ -109,20 +109,20 @@ describe("BaseColumn", () => {
 
     test("should track size correctly", async () => {
       expect(column.size()).toBe(0);
-      
+
       await column.set(0, "a");
       expect(column.size()).toBe(1);
-      
+
       await column.set(10, "b");
       expect(column.size()).toBe(2);
-      
+
       await column.set(0, "updated"); // Update existing
       expect(column.size()).toBe(2);
     });
 
     test("should check containment correctly", async () => {
       expect(column.contains(0)).toBe(false);
-      
+
       await column.set(0, "test");
       expect(column.contains(0)).toBe(true);
       expect(column.contains(1)).toBe(false);
@@ -131,7 +131,7 @@ describe("BaseColumn", () => {
     test("should remove values", async () => {
       await column.set(0, "test");
       expect(column.contains(0)).toBe(true);
-      
+
       await column.remove(0);
       expect(column.contains(0)).toBe(false);
       expect(await column.get(0)).toBeUndefined();
@@ -147,13 +147,13 @@ describe("BaseColumn", () => {
         { index: 2, value: undefined }, // Remove
         { index: 3, value: "d" }
       ];
-      
+
       // Set initial value at index 2
       await column.set(2, "c");
       expect(column.size()).toBe(1);
-      
+
       await column.batchUpdate(updates);
-      
+
       expect(await column.get(0)).toBe("a");
       expect(await column.get(1)).toBe("b");
       expect(await column.get(2)).toBeUndefined();
@@ -164,7 +164,7 @@ describe("BaseColumn", () => {
     test("should handle empty batch update", async () => {
       await column.set(0, "test");
       await column.batchUpdate([]);
-      
+
       expect(await column.get(0)).toBe("test");
       expect(column.size()).toBe(1);
     });
@@ -175,7 +175,7 @@ describe("BaseColumn", () => {
       await column.set(5, "a");
       await column.set(10, "b");
       await column.set(15, "c");
-      
+
       const fillList = column.getFillList();
       expect(fillList.has(5)).toBe(true);
       expect(fillList.has(10)).toBe(true);
@@ -187,7 +187,7 @@ describe("BaseColumn", () => {
     test("should update fill list on remove", async () => {
       await column.set(5, "test");
       expect(column.getFillList().has(5)).toBe(true);
-      
+
       await column.remove(5);
       expect(column.getFillList().has(5)).toBe(false);
     });
@@ -207,7 +207,7 @@ describe("BaseColumn", () => {
         const value = reader.getString();
         return value !== undefined && value.length > 5;
       });
-      
+
       expect(result.size()).toBe(3); // "banana", "cherry", and "elderberry"
       expect(result.has(1)).toBe(true); // banana
       expect(result.has(2)).toBe(true); // cherry
@@ -232,9 +232,9 @@ describe("BaseColumn", () => {
       await column.set(0, "a");
       await column.set(100, "b");
       await column.set(1000, "c");
-      
+
       const stats = column.getStats();
-      
+
       expect(stats.name).toBe("test_column");
       expect(stats.type).toBe("string");
       expect(stats.size).toBe(3);
@@ -247,7 +247,7 @@ describe("BaseColumn", () => {
 
     test("should handle empty column statistics", () => {
       const stats = column.getStats();
-      
+
       expect(stats.size).toBe(0);
       expect(stats.fillRatio).toBe(0);
     });
@@ -258,13 +258,13 @@ describe("BaseColumn", () => {
       await column.set(0, "hello");
       await column.set(10, "world");
       await column.set(20, "test");
-      
+
       const serialized = await column.serialize();
       expect(serialized).toBeInstanceOf(Uint8Array);
-      
+
       const newColumn = new TestColumn("restored", "string");
       await newColumn.deserialize(serialized);
-      
+
       expect(await newColumn.get(0)).toBe("hello");
       expect(await newColumn.get(10)).toBe("world");
       expect(await newColumn.get(20)).toBe("test");
@@ -275,7 +275,7 @@ describe("BaseColumn", () => {
       const serialized = await column.serialize();
       const newColumn = new TestColumn("restored", "string");
       await newColumn.deserialize(serialized);
-      
+
       expect(newColumn.size()).toBe(0);
     });
   });
@@ -284,15 +284,15 @@ describe("BaseColumn", () => {
     test("should clone column correctly", async () => {
       await column.set(0, "original");
       await column.set(5, "data");
-      
+
       const cloned = column.clone();
-      
+
       expect(cloned.getName()).toBe(column.getName());
       expect(cloned.getType()).toBe(column.getType());
       expect(cloned.size()).toBe(column.size());
       expect(await cloned.get(0)).toBe("original");
       expect(await cloned.get(5)).toBe("data");
-      
+
       // Should be independent
       await cloned.set(10, "new");
       expect(await column.get(10)).toBeUndefined();
@@ -302,10 +302,10 @@ describe("BaseColumn", () => {
   describe("dropped column behavior", () => {
     test("should prevent operations on dropped column", async () => {
       await column.set(0, "test");
-      
+
       column.drop();
       expect(column.isColumnDropped()).toBe(true);
-      
+
       await expect(column.set(1, "new")).rejects.toThrow("dropped");
       await expect(column.remove(0)).rejects.toThrow("dropped");
     });
@@ -313,7 +313,7 @@ describe("BaseColumn", () => {
     test("should allow reading from dropped column", async () => {
       await column.set(0, "test");
       column.drop();
-      
+
       // Reading should still work
       expect(await column.get(0)).toBe("test");
     });
@@ -323,7 +323,7 @@ describe("BaseColumn", () => {
     test("should create column reader", () => {
       const txnState = { cursor: 0 } as TransactionState;
       const reader = column.createReader(txnState);
-      
+
       expect(reader).toBeInstanceOf(ColumnReader);
     });
   });
@@ -333,17 +333,17 @@ describe("BaseColumn", () => {
       await column.set(0, "a");        // chunk 0
       await column.set(20000, "b");    // chunk 1
       await column.set(40000, "c");    // chunk 2
-      
+
       const dirtyChunks = column.getDirtyChunks();
       expect(dirtyChunks.length).toBeGreaterThan(0);
     });
 
     test("should mark chunks as clean", async () => {
       await column.set(0, "test");
-      
+
       const dirtyChunks = column.getDirtyChunks();
       expect(dirtyChunks.length).toBeGreaterThan(0);
-      
+
       column.markAllClean();
       expect(column.getDirtyChunks().length).toBe(0);
     });
@@ -376,7 +376,7 @@ describe("ColumnReader", () => {
   test("should get raw value", async () => {
     await column.set(5, "test");
     reader.setIndex(5);
-    
+
     expect(await reader.getRaw()).toBe("test");
   });
 });
@@ -391,9 +391,9 @@ describe("ColumnRegistry", () => {
   describe("registration", () => {
     test("should register columns", async () => {
       const column = new TestColumn("test", "string");
-      
+
       await registry.register(column);
-      
+
       expect(registry.has("test")).toBe(true);
       expect(registry.get("test")).toBe(column);
     });
@@ -401,7 +401,7 @@ describe("ColumnRegistry", () => {
     test("should prevent duplicate registration", async () => {
       const column1 = new TestColumn("test", "string");
       const column2 = new TestColumn("test", "string");
-      
+
       await registry.register(column1);
       await expect(registry.register(column2)).rejects.toThrow("already exists");
     });
@@ -409,7 +409,7 @@ describe("ColumnRegistry", () => {
     test("should get required column", async () => {
       const column = new TestColumn("test", "string");
       await registry.register(column);
-      
+
       expect(registry.getRequired("test")).toBe(column);
     });
 
@@ -449,11 +449,11 @@ describe("ColumnRegistry", () => {
 
     test("should drop columns", async () => {
       expect(registry.has("col1")).toBe(true);
-      
+
       const dropped = await registry.drop("col1");
       expect(dropped).toBe(true);
       expect(registry.has("col1")).toBe(false);
-      
+
       const droppedAgain = await registry.drop("col1");
       expect(droppedAgain).toBe(false);
     });
@@ -463,16 +463,16 @@ describe("ColumnRegistry", () => {
     test("should provide registry statistics", async () => {
       const col1 = new TestColumn("col1", "string");
       const col2 = new TestColumn("col2", "string");
-      
+
       await col1.set(0, "a");
       await col1.set(1, "b");
       await col2.set(0, "x");
-      
+
       await registry.register(col1);
       await registry.register(col2);
-      
+
       const stats = registry.getStats();
-      
+
       expect(stats.columnCount).toBe(2);
       expect(stats.totalSize).toBe(3); // 2 + 1
       expect(stats.totalCapacity).toBeGreaterThanOrEqual(stats.totalSize);
@@ -481,7 +481,7 @@ describe("ColumnRegistry", () => {
 
     test("should handle empty registry statistics", () => {
       const stats = registry.getStats();
-      
+
       expect(stats.columnCount).toBe(0);
       expect(stats.totalSize).toBe(0);
       expect(stats.totalCapacity).toBe(0);
@@ -493,11 +493,11 @@ describe("ColumnRegistry", () => {
     test("should clear all columns", async () => {
       await registry.register(new TestColumn("col1", "string"));
       await registry.register(new TestColumn("col2", "string"));
-      
+
       expect(registry.getNames().length).toBe(2);
-      
+
       await registry.clear();
-      
+
       expect(registry.getNames().length).toBe(0);
       expect(registry.has("col1")).toBe(false);
       expect(registry.has("col2")).toBe(false);
@@ -508,12 +508,12 @@ describe("ColumnRegistry", () => {
     test("should exclude dropped columns from listings", async () => {
       const column = new TestColumn("test", "string");
       await registry.register(column);
-      
+
       expect(registry.has("test")).toBe(true);
       expect(registry.getNames()).toContain("test");
-      
+
       column.drop();
-      
+
       expect(registry.has("test")).toBe(false);
       expect(registry.getNames()).not.toContain("test");
     });
@@ -522,7 +522,7 @@ describe("ColumnRegistry", () => {
       const column = new TestColumn("test", "string");
       await registry.register(column);
       column.drop();
-      
+
       expect(() => registry.getRequired("test")).toThrow("dropped");
     });
   });

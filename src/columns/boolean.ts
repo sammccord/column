@@ -1,6 +1,6 @@
 import { TypedFastBitSet } from 'typedfastbitset';
 import { BaseColumn, ColumnReader } from './base.js';
-import type { 
+import type {
   Reader,
   TransactionState,
   BooleanAccessor
@@ -31,7 +31,7 @@ export class BooleanColumn extends BaseColumn<boolean> {
     } else {
       this.trueBits.remove(index);
     }
-    
+
     // We don't use the data manager for booleans, just the bitmaps
   }
 
@@ -39,7 +39,7 @@ export class BooleanColumn extends BaseColumn<boolean> {
     if (!this.fillList.has(index)) {
       return undefined;
     }
-    
+
     return this.trueBits.has(index);
   }
 
@@ -84,7 +84,7 @@ export class BooleanColumn extends BaseColumn<boolean> {
    */
   async filterByValue(value: boolean, bitmap?: TypedFastBitSet): Promise<TypedFastBitSet> {
     const targetBitmap = bitmap ? BitmapUtils.and(this.fillList, bitmap) : this.fillList;
-    
+
     if (value) {
       return BitmapUtils.and(targetBitmap, this.trueBits);
     } else {
@@ -102,7 +102,7 @@ export class BooleanColumn extends BaseColumn<boolean> {
   async serialize(): Promise<Uint8Array> {
     const fillListBytes = BitmapUtils.serialize(this.fillList);
     const trueBitsBytes = BitmapUtils.serialize(this.trueBits);
-    
+
     // Calculate total size
     const totalSize = 4 + 1 + 4 + fillListBytes.length + 4 + trueBitsBytes.length;
 
@@ -114,7 +114,7 @@ export class BooleanColumn extends BaseColumn<boolean> {
     // Write header
     view.setUint32(offset, 1, true); // version
     offset += 4;
-    
+
     view.setUint8(offset, COLUMN_TYPE_CODES.BOOLEAN);
     offset += 1;
 
@@ -140,14 +140,14 @@ export class BooleanColumn extends BaseColumn<boolean> {
     // Read header
     const version = view.getUint32(offset, true);
     offset += 4;
-    
+
     if (version !== 1) {
       throw new Error(`Unsupported boolean column version: ${version}`);
     }
 
     const typeCode = view.getUint8(offset);
     offset += 1;
-    
+
     if (typeCode !== COLUMN_TYPE_CODES.BOOLEAN) {
       throw new Error(`Type code mismatch: expected ${COLUMN_TYPE_CODES.BOOLEAN}, got ${typeCode}`);
     }
@@ -155,7 +155,7 @@ export class BooleanColumn extends BaseColumn<boolean> {
     // Read fill list
     const fillListLength = view.getUint32(offset, true);
     offset += 4;
-    
+
     const fillListBytes = new Uint8Array(data.buffer, data.byteOffset + offset, fillListLength);
     this.fillList = BitmapUtils.deserialize(fillListBytes);
     offset += fillListLength;
@@ -163,7 +163,7 @@ export class BooleanColumn extends BaseColumn<boolean> {
     // Read true bits
     const trueBitsLength = view.getUint32(offset, true);
     offset += 4;
-    
+
     const trueBitsBytes = new Uint8Array(data.buffer, data.byteOffset + offset, trueBitsLength);
     this.trueBits = BitmapUtils.deserialize(trueBitsBytes);
     offset += trueBitsLength;
@@ -191,7 +191,7 @@ export class BooleanColumn extends BaseColumn<boolean> {
     const baseStats = super.getStats();
     const trueCount = this.trueBits.size();
     const falseCount = this.size() - trueCount;
-    
+
     return {
       ...baseStats,
       trueCount,
@@ -246,5 +246,5 @@ export class BooleanColumnAccessor implements BooleanAccessor {
 }
 
 // Factory function
-export const createBooleanColumn = (name: string, options?: Record<string, any>) => 
+export const createBooleanColumn = (name: string, options?: Record<string, any>) =>
   new BooleanColumn(name, options);

@@ -1,8 +1,8 @@
 import { describe, test, expect, beforeEach } from "bun:test";
 import { TypedFastBitSet } from 'typedfastbitset';
-import { 
-  SortIndexColumn, 
-  SortIndexColumnReader, 
+import {
+  SortIndexColumn,
+  SortIndexColumnReader,
   SortIndexUtils,
   createSortIndexColumn
 } from "../../src/columns/sort-index.js";
@@ -121,7 +121,7 @@ describe("SortIndexColumn", () => {
 
     test("should return all items in sorted order", async () => {
       const allSorted = await sortIndex.getAllSorted();
-      
+
       expect(allSorted).toHaveLength(5);
       expect(allSorted.map(item => item.key)).toEqual([
         "apple", "banana", "cherry", "date", "elderberry"
@@ -131,7 +131,7 @@ describe("SortIndexColumn", () => {
 
     test("should perform range queries", async () => {
       const range = await sortIndex.getRange("banana", "date", true);
-      
+
       expect(range).toHaveLength(3);
       expect(range.map(item => item.key)).toEqual(["banana", "cherry", "date"]);
       expect(range.map(item => item.value)).toEqual([0, 2, 3]);
@@ -139,7 +139,7 @@ describe("SortIndexColumn", () => {
 
     test("should perform range queries with exclusion", async () => {
       const range = await sortIndex.getRange("banana", "date", false);
-      
+
       expect(range).toHaveLength(2);
       expect(range.map(item => item.key)).toEqual(["banana", "cherry"]);
     });
@@ -154,14 +154,14 @@ describe("SortIndexColumn", () => {
 
     test("should respect limit in range queries", async () => {
       const limited = await sortIndex.getRange(undefined, undefined, false, 2);
-      
+
       expect(limited).toHaveLength(2);
       expect(limited.map(item => item.key)).toEqual(["apple", "banana"]);
     });
 
     test("should perform reverse range queries", async () => {
       const reverse = await sortIndex.getRangeReverse("date", "banana", true);
-      
+
       expect(reverse.map(item => item.key)).toEqual(["date", "cherry", "banana"]);
     });
 
@@ -219,7 +219,7 @@ describe("SortIndexColumn", () => {
 
     test("should handle empty index boundaries", async () => {
       const emptyIndex = createSortIndexColumn("empty", "target", (r) => r.getString() || '');
-      
+
       expect(await emptyIndex.getMinKey()).toBeUndefined();
       expect(await emptyIndex.getMaxKey()).toBeUndefined();
       expect(await emptyIndex.findFirstGTE("any")).toBeUndefined();
@@ -290,10 +290,10 @@ describe("SortIndexColumn", () => {
       await newIndex.deserialize(serialized);
 
       expect(newIndex.getSortedSize()).toBe(5);
-      
+
       const originalSorted = await sortIndex.getAllSorted();
       const restoredSorted = await newIndex.getAllSorted();
-      
+
       expect(restoredSorted).toEqual(originalSorted);
       expect(await newIndex.getMinKey()).toBe("apple");
       expect(await newIndex.getMaxKey()).toBe("elderberry");
@@ -378,7 +378,7 @@ describe("SortIndexColumn", () => {
       };
 
       const faultyIndex = createSortIndexColumn("faulty", "target", faultyExtractor);
-      
+
       // Should not throw, but log warning
       await faultyIndex.updateSortEntry(0, targetColumn);
       expect(faultyIndex.getSortedSize()).toBe(0);
@@ -404,7 +404,7 @@ describe("SortIndexColumnReader", () => {
   test("should read sort keys and items", () => {
     reader.setIndex(0);
     expect(reader.getSortKey()).toBe("banana");
-    
+
     const item = reader.getSortItem();
     expect(item?.key).toBe("banana");
     expect(item?.value).toBe(0);
@@ -437,15 +437,15 @@ describe("SortIndexUtils", () => {
     await numericColumn.set(1, 5);
     await numericColumn.set(2, 42);
 
-    await recordColumn.set(0, { 
-      name: "Alice", 
-      age: 30, 
+    await recordColumn.set(0, {
+      name: "Alice",
+      age: 30,
       date: new Date("2023-01-01"),
       profile: { city: "New York" }
     });
-    await recordColumn.set(1, { 
-      name: "Bob", 
-      age: 25, 
+    await recordColumn.set(1, {
+      name: "Bob",
+      age: 25,
       date: new Date("2023-06-15"),
       profile: { city: "London" }
     });
@@ -462,7 +462,7 @@ describe("SortIndexUtils", () => {
 
     test("should use custom string comparator", async () => {
       const index = SortIndexUtils.createStringIndex(
-        "string_index", 
+        "string_index",
         "strings",
         (a, b) => b.localeCompare(a) // Reverse order
       );
@@ -503,7 +503,7 @@ describe("SortIndexUtils", () => {
 
       const sorted = await index.getAllSorted();
       expect(sorted).toHaveLength(2);
-      
+
       // Earlier date should come first
       const dates = sorted.map(item => new Date(item.key));
       expect(dates[0] < dates[1]).toBe(true);
@@ -551,8 +551,8 @@ describe("SortIndexUtils", () => {
 
     test("should use custom comparator for record fields", async () => {
       const index = SortIndexUtils.createRecordFieldIndex(
-        "name_index", 
-        "records", 
+        "name_index",
+        "records",
         "name",
         (a, b) => b.localeCompare(a) // Reverse order
       );
@@ -600,7 +600,7 @@ describe("SortIndexColumn edge cases", () => {
 
     const sorted = await sortIndex.getAllSorted();
     expect(sorted).toHaveLength(4);
-    
+
     // Should be sorted by key first, then by value (index) for stable sorting
     const sameItems = sorted.filter(item => item.key === "same");
     expect(sameItems.map(item => item.value)).toEqual([0, 1, 2]);
@@ -620,7 +620,7 @@ describe("SortIndexColumn edge cases", () => {
 
     const sorted = await sortIndex.getAllSorted();
     expect(sorted).toHaveLength(5);
-    
+
     // Verify all special values are handled
     expect(sorted.some(item => item.key === "")).toBe(true);
     expect(sorted.some(item => item.key === "🚀emoji")).toBe(true);
@@ -645,10 +645,10 @@ describe("SortIndexColumn edge cases", () => {
     await Promise.all(promises);
 
     expect(sortIndex.getSortedSize()).toBe(10);
-    
+
     const sorted = await sortIndex.getAllSorted();
     expect(sorted).toHaveLength(10);
-    
+
     // Verify all items are properly sorted
     for (let i = 1; i < sorted.length; i++) {
       expect(sorted[i-1].key.localeCompare(sorted[i].key)).toBeLessThanOrEqual(0);

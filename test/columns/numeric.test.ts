@@ -1,8 +1,8 @@
 import { describe, test, expect, beforeEach } from "bun:test";
 import { TypedFastBitSet } from 'typedfastbitset';
-import { 
-  NumericColumn, 
-  NumericColumnReader, 
+import {
+  NumericColumn,
+  NumericColumnReader,
   NumericColumnAccessor,
   createInt8Column,
   createInt16Column,
@@ -69,7 +69,7 @@ describe("NumericColumn", () => {
       await int32Column.set(0, 42);
       await int32Column.set(1, -100);
       await int32Column.set(2, 0);
-      
+
       expect(await int32Column.get(0)).toBe(42);
       expect(await int32Column.get(1)).toBe(-100);
       expect(await int32Column.get(2)).toBe(0);
@@ -80,7 +80,7 @@ describe("NumericColumn", () => {
       await float64Column.set(0, 3.14);
       await float64Column.set(1, -2.5);
       await float64Column.set(2, 0.0);
-      
+
       expect(await float64Column.get(0)).toBe(3.14);
       expect(await float64Column.get(1)).toBe(-2.5);
       expect(await float64Column.get(2)).toBe(0.0);
@@ -90,7 +90,7 @@ describe("NumericColumn", () => {
       await bigintColumn.set(0, 9007199254740991n);
       await bigintColumn.set(1, -9007199254740991n);
       await bigintColumn.set(2, 0n);
-      
+
       expect(await bigintColumn.get(0)).toBe(9007199254740991n);
       expect(await bigintColumn.get(1)).toBe(-9007199254740991n);
       expect(await bigintColumn.get(2)).toBe(0n);
@@ -106,7 +106,7 @@ describe("NumericColumn", () => {
       await float64Column.set(0, Infinity);
       await float64Column.set(1, -Infinity);
       await float64Column.set(2, NaN);
-      
+
       expect(await float64Column.get(0)).toBe(Infinity);
       expect(await float64Column.get(1)).toBe(-Infinity);
       expect(Number.isNaN(await float64Column.get(2))).toBe(true);
@@ -120,14 +120,14 @@ describe("NumericColumn", () => {
     beforeEach(async () => {
       column = createInt32Column("test");
       bigintColumn = createInt64Column("bigint_test");
-      
+
       // Set up test data: [10, 20, 30, 40, 50] at indices [0, 2, 4, 6, 8]
       await column.set(0, 10);
       await column.set(2, 20);
       await column.set(4, 30);
       await column.set(6, 40);
       await column.set(8, 50);
-      
+
       // BigInt data
       await bigintColumn.set(0, 100n);
       await bigintColumn.set(1, 200n);
@@ -185,7 +185,7 @@ describe("NumericColumn", () => {
 
     test("should handle empty aggregations", async () => {
       const emptyColumn = createInt32Column("empty");
-      
+
       expect(await emptyColumn.sum()).toBe(0);
       expect(await emptyColumn.min()).toBeUndefined();
       expect(await emptyColumn.max()).toBeUndefined();
@@ -194,7 +194,7 @@ describe("NumericColumn", () => {
 
     test("should handle empty bitmap aggregations", async () => {
       const emptyBitmap = new TypedFastBitSet();
-      
+
       expect(await column.sum(emptyBitmap)).toBe(0);
       expect(await column.min(emptyBitmap)).toBeUndefined();
       expect(await column.max(emptyBitmap)).toBeUndefined();
@@ -206,12 +206,12 @@ describe("NumericColumn", () => {
     test("should handle integer boundaries", async () => {
       const int32Col = createInt32Column("int32");
       const uint32Col = createUint32Column("uint32");
-      
+
       await int32Col.set(0, 2147483647);  // Max int32
       await int32Col.set(1, -2147483648); // Min int32
       await uint32Col.set(0, 4294967295); // Max uint32
       await uint32Col.set(1, 0);          // Min uint32
-      
+
       expect(await int32Col.get(0)).toBe(2147483647);
       expect(await int32Col.get(1)).toBe(-2147483648);
       expect(await uint32Col.get(0)).toBe(4294967295);
@@ -220,24 +220,24 @@ describe("NumericColumn", () => {
 
     test("should handle bigint boundaries", async () => {
       const int64Col = createInt64Column("int64");
-      
+
       const maxBigInt = BigInt(Number.MAX_SAFE_INTEGER);
       const minBigInt = BigInt(Number.MIN_SAFE_INTEGER);
-      
+
       await int64Col.set(0, maxBigInt);
       await int64Col.set(1, minBigInt);
-      
+
       expect(await int64Col.get(0)).toBe(maxBigInt);
       expect(await int64Col.get(1)).toBe(minBigInt);
     });
 
     test("should handle float boundaries", async () => {
       const float64Col = createFloat64Column("float64");
-      
+
       await float64Col.set(0, Number.MAX_VALUE);
       await float64Col.set(1, Number.MIN_VALUE);
       await float64Col.set(2, -Number.MAX_VALUE);
-      
+
       expect(await float64Col.get(0)).toBe(Number.MAX_VALUE);
       expect(await float64Col.get(1)).toBe(Number.MIN_VALUE);
       expect(await float64Col.get(2)).toBe(-Number.MAX_VALUE);
@@ -250,13 +250,13 @@ describe("NumericColumn", () => {
       await original.set(0, 42);
       await original.set(100, -123);
       await original.set(1000, 0);
-      
+
       const serialized = await original.serialize();
       expect(serialized).toBeInstanceOf(Uint8Array);
-      
+
       const restored = createInt32Column("restored");
       await restored.deserialize(serialized);
-      
+
       expect(await restored.get(0)).toBe(42);
       expect(await restored.get(100)).toBe(-123);
       expect(await restored.get(1000)).toBe(0);
@@ -268,11 +268,11 @@ describe("NumericColumn", () => {
       await original.set(0, 3.14159);
       await original.set(1, -2.71828);
       await original.set(2, Infinity);
-      
+
       const serialized = await original.serialize();
       const restored = createFloat64Column("restored");
       await restored.deserialize(serialized);
-      
+
       expect(await restored.get(0)).toBeCloseTo(3.14159, 5);
       expect(await restored.get(1)).toBeCloseTo(-2.71828, 5);
       expect(await restored.get(2)).toBe(Infinity);
@@ -283,11 +283,11 @@ describe("NumericColumn", () => {
       await original.set(0, 9007199254740991n);
       await original.set(1, -9007199254740991n);
       await original.set(2, 0n);
-      
+
       const serialized = await original.serialize();
       const restored = createInt64Column("restored");
       await restored.deserialize(serialized);
-      
+
       expect(await restored.get(0)).toBe(9007199254740991n);
       expect(await restored.get(1)).toBe(-9007199254740991n);
       expect(await restored.get(2)).toBe(0n);
@@ -297,7 +297,7 @@ describe("NumericColumn", () => {
       const int32Col = createInt32Column("test");
       await int32Col.set(0, 42);
       const serialized = await int32Col.serialize();
-      
+
       const float64Col = createFloat64Column("test");
       await expect(float64Col.deserialize(serialized)).rejects.toThrow("Type code mismatch");
     });
@@ -309,16 +309,16 @@ describe("NumericColumn", () => {
       await original.set(0, 10);
       await original.set(5, 50);
       await original.set(10, 100);
-      
+
       const cloned = original.clone();
-      
+
       expect(cloned.getName()).toBe("original");
       expect(cloned.getNumericType()).toBe("int32");
       expect(cloned.size()).toBe(3);
       expect(await cloned.get(0)).toBe(10);
       expect(await cloned.get(5)).toBe(50);
       expect(await cloned.get(10)).toBe(100);
-      
+
       // Should be independent
       await cloned.set(15, 150);
       expect(await original.get(15)).toBeUndefined();
@@ -338,11 +338,11 @@ describe("NumericColumnReader", () => {
     column = createInt32Column("test");
     bigintColumn = createInt64Column("bigint_test");
     floatColumn = createFloat64Column("float_test");
-    
+
     reader = new NumericColumnReader(column);
     bigintReader = new NumericColumnReader(bigintColumn);
     floatReader = new NumericColumnReader(floatColumn);
-    
+
     await column.set(0, 42);
     await column.set(1, -100);
     await bigintColumn.set(0, 9007199254740991n);
@@ -352,10 +352,10 @@ describe("NumericColumnReader", () => {
   test("should read int values", () => {
     reader.setIndex(0);
     expect(reader.getInt()).toBe(42);
-    
+
     reader.setIndex(1);
     expect(reader.getInt()).toBe(-100);
-    
+
     reader.setIndex(99);
     expect(reader.getInt()).toBeUndefined();
   });
@@ -363,7 +363,7 @@ describe("NumericColumnReader", () => {
   test("should read bigint values", () => {
     bigintReader.setIndex(0);
     expect(bigintReader.getBigInt()).toBe(9007199254740991n);
-    
+
     // Regular columns should convert to BigInt
     reader.setIndex(0);
     expect(reader.getBigInt()).toBe(42n);
@@ -372,11 +372,11 @@ describe("NumericColumnReader", () => {
   test("should read float values", () => {
     floatReader.setIndex(0);
     expect(floatReader.getFloat()).toBeCloseTo(3.14159, 5);
-    
+
     // Integer columns should work as float
     reader.setIndex(0);
     expect(reader.getFloat()).toBe(42);
-    
+
     // BigInt columns should convert to number
     bigintReader.setIndex(0);
     expect(bigintReader.getFloat()).toBe(9007199254740991);
@@ -395,7 +395,7 @@ describe("NumericColumnAccessor", () => {
     await column.set(2, 30);
     await column.set(3, 40);
     await column.set(4, 50);
-    
+
     txnState = {
       cursor: 0,
       setup: false,
@@ -403,14 +403,14 @@ describe("NumericColumnAccessor", () => {
       dirty: new TypedFastBitSet(),
       columns: new Map()
     };
-    
+
     accessor = new NumericColumnAccessor(column, txnState);
   });
 
   test("should get current value", () => {
     txnState.cursor = 2;
     expect(accessor.get()).toBe(30);
-    
+
     txnState.cursor = 99;
     expect(accessor.get()).toBeUndefined();
   });
@@ -444,15 +444,15 @@ describe("NumericColumn edge cases", () => {
   test("should handle mixed numeric operations", async () => {
     const int8Col = createInt8Column("int8");
     const uint64Col = createUint64Column("uint64");
-    
+
     // Test small values in int8
     await int8Col.set(0, 127);  // max int8
     await int8Col.set(1, -128); // min int8
-    
+
     // Test large values in uint64
     await uint64Col.set(0, 18446744073709551615n); // max uint64
     await uint64Col.set(1, 0n);
-    
+
     expect(await int8Col.get(0)).toBe(127);
     expect(await int8Col.get(1)).toBe(-128);
     expect(await uint64Col.get(0)).toBe(18446744073709551615n);
@@ -464,11 +464,11 @@ describe("NumericColumn edge cases", () => {
     await floatCol.set(0, 10);
     await floatCol.set(1, NaN);
     await floatCol.set(2, 30);
-    
+
     // Aggregations with NaN should handle gracefully
     const sum = await floatCol.sum();
     const avg = await floatCol.avg();
-    
+
     // NaN in sum should make result NaN
     expect(Number.isNaN(sum)).toBe(true);
     expect(Number.isNaN(avg)).toBe(true);
@@ -479,11 +479,11 @@ describe("NumericColumn edge cases", () => {
     await floatCol.set(0, 10);
     await floatCol.set(1, Infinity);
     await floatCol.set(2, 30);
-    
+
     const sum = await floatCol.sum();
     const max = await floatCol.max();
     const min = await floatCol.min();
-    
+
     expect(sum).toBe(Infinity);
     expect(max).toBe(Infinity);
     expect(min).toBe(10);

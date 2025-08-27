@@ -1,8 +1,8 @@
 import { describe, test, expect, beforeEach } from "bun:test";
 import { TypedFastBitSet } from 'typedfastbitset';
-import { 
-  KeyColumn, 
-  KeyColumnReader, 
+import {
+  KeyColumn,
+  KeyColumnReader,
   KeyColumnUtils,
   createKeyColumn
 } from "../../src/columns/key.js";
@@ -37,13 +37,13 @@ describe("KeyColumn", () => {
 
     test("should enforce uniqueness by default", async () => {
       await column.set(0, "unique_key");
-      
+
       await expect(column.set(1, "unique_key")).rejects.toThrow("Duplicate key: unique_key");
     });
 
     test("should allow duplicate keys when unique is false", async () => {
       const nonUniqueColumn = createKeyColumn("non_unique", { unique: false });
-      
+
       await nonUniqueColumn.set(0, "duplicate_key");
       await nonUniqueColumn.set(1, "duplicate_key");
 
@@ -53,7 +53,7 @@ describe("KeyColumn", () => {
 
     test("should allow updating same index with same key", async () => {
       await column.set(0, "test_key");
-      
+
       // Should not throw even with unique=true
       await column.set(0, "test_key");
       expect(await column.get(0)).toBe("test_key");
@@ -141,7 +141,7 @@ describe("KeyColumn", () => {
     test("should get all key-index pairs", () => {
       const pairs = column.getAllPairs();
       expect(pairs).toHaveLength(4);
-      
+
       const pairMap = new Map(pairs);
       expect(pairMap.get("alpha")).toBe(0);
       expect(pairMap.get("beta")).toBe(5);
@@ -161,7 +161,7 @@ describe("KeyColumn", () => {
 
     test("should filter by prefix", async () => {
       const userKeys = await column.filterByPrefix("user:");
-      
+
       expect(userKeys.size()).toBe(3);
       expect(userKeys.has(0)).toBe(true); // user:alice
       expect(userKeys.has(1)).toBe(true); // user:bob
@@ -170,7 +170,7 @@ describe("KeyColumn", () => {
 
     test("should filter by suffix", async () => {
       const aliceKeys = await column.filterBySuffix(":alice");
-      
+
       expect(aliceKeys.size()).toBe(1);
       expect(aliceKeys.has(0)).toBe(true); // user:alice
     });
@@ -178,7 +178,7 @@ describe("KeyColumn", () => {
     test("should filter by regex pattern", async () => {
       const pattern = /^(user|admin):/;
       const result = await column.filterByPattern(pattern);
-      
+
       expect(result.size()).toBe(4); // All except guest:eve
       expect(result.has(0)).toBe(true); // user:alice
       expect(result.has(1)).toBe(true); // user:bob
@@ -190,7 +190,7 @@ describe("KeyColumn", () => {
     test("should filter by multiple keys", async () => {
       const targetKeys = ["user:alice", "admin:charlie", "nonexistent"];
       const result = await column.filterByKeys(targetKeys);
-      
+
       expect(result.size()).toBe(2);
       expect(result.has(0)).toBe(true); // user:alice
       expect(result.has(2)).toBe(true); // admin:charlie
@@ -199,7 +199,7 @@ describe("KeyColumn", () => {
     test("should filter with bitmap constraint", async () => {
       const constraintBitmap = BitmapUtils.fromIndices([0, 2, 4]); // alice, charlie, eve
       const result = await column.filterByPrefix("user:", constraintBitmap);
-      
+
       expect(result.size()).toBe(1);
       expect(result.has(0)).toBe(true); // user:alice (only user: key in constraint)
     });
@@ -219,7 +219,7 @@ describe("KeyColumn", () => {
       await column.set(4, "example"); // length 7
 
       const stats = column.getKeyStats();
-      
+
       expect(stats.uniqueKeys).toBe(5);
       expect(stats.totalMappings).toBe(5);
       expect(stats.averageKeyLength).toBe((1 + 5 + 5 + 4 + 7) / 5); // 4.4
@@ -231,7 +231,7 @@ describe("KeyColumn", () => {
 
     test("should handle empty column statistics", () => {
       const stats = column.getKeyStats();
-      
+
       expect(stats.uniqueKeys).toBe(0);
       expect(stats.totalMappings).toBe(0);
       expect(stats.averageKeyLength).toBe(0);
@@ -333,7 +333,7 @@ describe("KeyColumn", () => {
       await nonUniqueColumn.set(1, "dup");
 
       const cloned = nonUniqueColumn.clone();
-      
+
       // Should allow duplicates in clone too
       await cloned.set(2, "dup");
       expect(await cloned.get(2)).toBe("dup");
@@ -358,10 +358,10 @@ describe("KeyColumn", () => {
       // Manually corrupt the mappings for testing
       const keyToIndex = (column as any).keyToIndex;
       const indexToKey = (column as any).indexToKey;
-      
+
       // Add inconsistent mapping
       keyToIndex.set("corrupted", 99);
-      
+
       const validation = column.validateIntegrity();
       expect(validation.valid).toBe(false);
       expect(validation.errors.length).toBeGreaterThan(0);
@@ -401,7 +401,7 @@ describe("KeyColumnUtils", () => {
     test("should generate unique keys", () => {
       const key1 = KeyColumnUtils.generateUniqueKey();
       const key2 = KeyColumnUtils.generateUniqueKey();
-      
+
       expect(key1).not.toBe(key2);
       expect(typeof key1).toBe('string');
       expect(key1.length).toBeGreaterThan(0);
@@ -410,7 +410,7 @@ describe("KeyColumnUtils", () => {
     test("should generate unique keys with prefix", () => {
       const key1 = KeyColumnUtils.generateUniqueKey("user:");
       const key2 = KeyColumnUtils.generateUniqueKey("user:");
-      
+
       expect(key1.startsWith("user:")).toBe(true);
       expect(key2.startsWith("user:")).toBe(true);
       expect(key1).not.toBe(key2);
@@ -419,10 +419,10 @@ describe("KeyColumnUtils", () => {
     test("should generate hash-based keys", () => {
       const obj1 = { id: 1, name: "test" };
       const obj2 = { id: 2, name: "test" };
-      
+
       const key1 = KeyColumnUtils.generateHashKey(obj1);
       const key2 = KeyColumnUtils.generateHashKey(obj2);
-      
+
       expect(typeof key1).toBe('string');
       expect(typeof key2).toBe('string');
       expect(key1).not.toBe(key2);
@@ -431,14 +431,14 @@ describe("KeyColumnUtils", () => {
     test("should generate hash keys with prefix", () => {
       const obj = { id: 1 };
       const key = KeyColumnUtils.generateHashKey(obj, "hash:");
-      
+
       expect(key.startsWith("hash:")).toBe(true);
     });
 
     test("should generate UUID-like keys", () => {
       const uuid1 = KeyColumnUtils.generateUUIDKey();
       const uuid2 = KeyColumnUtils.generateUUIDKey();
-      
+
       expect(uuid1).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/);
       expect(uuid2).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/);
       expect(uuid1).not.toBe(uuid2);
@@ -448,9 +448,9 @@ describe("KeyColumnUtils", () => {
   describe("key validation", () => {
     test("should validate basic keys", () => {
       expect(KeyColumnUtils.validateKey("valid_key")).toEqual({ valid: true });
-      expect(KeyColumnUtils.validateKey("")).toEqual({ 
-        valid: false, 
-        error: "Key cannot be empty" 
+      expect(KeyColumnUtils.validateKey("")).toEqual({
+        valid: false,
+        error: "Key cannot be empty"
       });
     });
 
@@ -466,7 +466,7 @@ describe("KeyColumnUtils", () => {
 
     test("should validate key patterns", () => {
       const pattern = /^[a-z]+$/;
-      
+
       expect(KeyColumnUtils.validateKey("validkey", { pattern })).toEqual({ valid: true });
       expect(KeyColumnUtils.validateKey("InvalidKey", { pattern })).toEqual({
         valid: false,
@@ -482,7 +482,7 @@ describe("KeyColumnUtils", () => {
     test("should use default validation options", () => {
       const longKey = "x".repeat(1001);
       const result = KeyColumnUtils.validateKey(longKey);
-      
+
       expect(result.valid).toBe(false);
       expect(result.error).toContain("too long");
     });
@@ -493,7 +493,7 @@ describe("KeyColumn edge cases", () => {
   test("should handle very long keys", async () => {
     const column = createKeyColumn("long_keys");
     const longKey = "x".repeat(1000);
-    
+
     await column.set(0, longKey);
     expect(await column.get(0)).toBe(longKey);
     expect(column.findIndex(longKey)).toBe(0);
@@ -523,7 +523,7 @@ describe("KeyColumn edge cases", () => {
 
   test("should handle sparse key indices", async () => {
     const column = createKeyColumn("sparse");
-    
+
     await column.set(0, "first");
     await column.set(1000, "middle");
     await column.set(100000, "last");
@@ -536,7 +536,7 @@ describe("KeyColumn edge cases", () => {
 
   test("should handle rapid key updates", async () => {
     const column = createKeyColumn("updates");
-    
+
     for (let i = 0; i < 100; i++) {
       await column.set(0, `key_${i}`);
     }
@@ -568,7 +568,7 @@ describe("KeyColumn edge cases", () => {
 
   test("should maintain performance with prefix filtering on many keys", async () => {
     const column = createKeyColumn("performance");
-    
+
     // Add keys with different prefixes
     for (let i = 0; i < 200; i++) {
       await column.set(i, `user_${i}`);

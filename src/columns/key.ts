@@ -1,6 +1,6 @@
 import { TypedFastBitSet } from 'typedfastbitset';
 import { BaseColumn, ColumnReader } from './base.js';
-import type { 
+import type {
   Reader,
   TransactionState
 } from '../types.js';
@@ -186,9 +186,9 @@ export class KeyColumn extends BaseColumn<string> {
   } {
     const keys = Array.from(this.keyToIndex.keys());
     const lengths = keys.map(key => key.length);
-    
+
     lengths.sort((a, b) => a - b);
-    
+
     return {
       uniqueKeys: keys.length,
       totalMappings: this.keyToIndex.size,
@@ -205,11 +205,11 @@ export class KeyColumn extends BaseColumn<string> {
   async serialize(): Promise<Uint8Array> {
     const fillListBytes = BitmapUtils.serialize(this.fillList);
     const encoder = new TextEncoder();
-    
+
     // Calculate size for key mappings
     let mappingSize = 4; // mapping count
     const mappings = Array.from(this.keyToIndex.entries());
-    
+
     for (const [key, index] of mappings) {
       const keyBytes = encoder.encode(key);
       mappingSize += 4 + keyBytes.length + 4; // key length + key + index
@@ -226,7 +226,7 @@ export class KeyColumn extends BaseColumn<string> {
     // Write header
     view.setUint32(offset, 1, true); // version
     offset += 4;
-    
+
     view.setUint8(offset, COLUMN_TYPE_CODES.KEY);
     offset += 1;
 
@@ -242,13 +242,13 @@ export class KeyColumn extends BaseColumn<string> {
 
     for (const [key, index] of mappings) {
       const keyBytes = encoder.encode(key);
-      
+
       // Write key
       view.setUint32(offset, keyBytes.length, true);
       offset += 4;
       new Uint8Array(buffer, offset, keyBytes.length).set(keyBytes);
       offset += keyBytes.length;
-      
+
       // Write index
       view.setUint32(offset, index, true);
       offset += 4;
@@ -265,14 +265,14 @@ export class KeyColumn extends BaseColumn<string> {
     // Read header
     const version = view.getUint32(offset, true);
     offset += 4;
-    
+
     if (version !== 1) {
       throw new Error(`Unsupported key column version: ${version}`);
     }
 
     const typeCode = view.getUint8(offset);
     offset += 1;
-    
+
     if (typeCode !== COLUMN_TYPE_CODES.KEY) {
       throw new Error(`Type code mismatch: expected ${COLUMN_TYPE_CODES.KEY}, got ${typeCode}`);
     }
@@ -280,7 +280,7 @@ export class KeyColumn extends BaseColumn<string> {
     // Read fill list
     const fillListLength = view.getUint32(offset, true);
     offset += 4;
-    
+
     const fillListBytes = new Uint8Array(data.buffer, data.byteOffset + offset, fillListLength);
     this.fillList = BitmapUtils.deserialize(fillListBytes);
     offset += fillListLength;
@@ -296,15 +296,15 @@ export class KeyColumn extends BaseColumn<string> {
       // Read key
       const keyLength = view.getUint32(offset, true);
       offset += 4;
-      
+
       const keyBytes = new Uint8Array(data.buffer, data.byteOffset + offset, keyLength);
       const key = decoder.decode(keyBytes);
       offset += keyLength;
-      
+
       // Read index
       const index = view.getUint32(offset, true);
       offset += 4;
-      
+
       // Restore mappings and data
       this.keyToIndex.set(key, index);
       this.indexToKey.set(index, key);
@@ -339,11 +339,11 @@ export class KeyColumn extends BaseColumn<string> {
       if (!this.indexToKey.has(index)) {
         errors.push(`Key '${key}' maps to index ${index} but reverse mapping missing`);
       }
-      
+
       if (this.indexToKey.get(index) !== key) {
         errors.push(`Key '${key}' maps to index ${index} but reverse maps to '${this.indexToKey.get(index)}'`);
       }
-      
+
       if (!this.fillList.has(index)) {
         errors.push(`Key '${key}' maps to index ${index} but index not in fill list`);
       }
@@ -354,7 +354,7 @@ export class KeyColumn extends BaseColumn<string> {
       if (!this.keyToIndex.has(key)) {
         errors.push(`Index ${index} maps to key '${key}' but reverse mapping missing`);
       }
-      
+
       if (this.keyToIndex.get(key) !== index) {
         errors.push(`Index ${index} maps to key '${key}' but reverse maps to ${this.keyToIndex.get(key)}`);
       }
@@ -432,14 +432,14 @@ export class KeyColumnUtils {
   static generateUUIDKey(): string {
     const chars = '0123456789abcdef';
     let result = '';
-    
+
     for (let i = 0; i < 32; i++) {
       if (i === 8 || i === 12 || i === 16 || i === 20) {
         result += '-';
       }
       result += chars[Math.floor(Math.random() * 16)];
     }
-    
+
     return result;
   }
 
@@ -476,5 +476,5 @@ export class KeyColumnUtils {
 }
 
 // Factory function
-export const createKeyColumn = (name: string, options?: { unique?: boolean; [key: string]: any }) => 
+export const createKeyColumn = (name: string, options?: { unique?: boolean; [key: string]: any }) =>
   new KeyColumn(name, options);

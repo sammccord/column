@@ -1,6 +1,6 @@
 import { TypedFastBitSet } from 'typedfastbitset';
 import { BaseColumn, ColumnReader } from './base.js';
-import type { 
+import type {
   Reader,
   TransactionState,
   RecordAccessor
@@ -36,7 +36,7 @@ export class RecordColumn<T = any> extends BaseColumn<T> {
   private readonly unmarshaler?: (data: Uint8Array) => T;
 
   constructor(
-    name: string, 
+    name: string,
     options: {
       marshaler?: (value: T) => Uint8Array;
       unmarshaler?: (data: Uint8Array) => T;
@@ -146,14 +146,14 @@ export class RecordColumn<T = any> extends BaseColumn<T> {
   /**
    * Create a record accessor for transaction use
    */
-  createAccessor<R = T>(txnState: TransactionState): RecordAccessor<R> {
-    return new RecordColumnAccessor(this, txnState);
+  createAccessor(txnState: TransactionState): RecordAccessor<T> {
+    return new RecordColumnAccessor<T>(this, txnState);
   }
 
   async serialize(): Promise<Uint8Array> {
     const chunks = this.getDirtyChunks();
     const fillListBytes = BitmapUtils.serialize(this.fillList);
-    
+
     // Serialize all record data
     const serializedChunks: Uint8Array[] = [];
     let totalDataSize = 0;
@@ -176,7 +176,7 @@ export class RecordColumn<T = any> extends BaseColumn<T> {
     // Write header
     view.setUint32(offset, 1, true); // version
     offset += 4;
-    
+
     view.setUint8(offset, COLUMN_TYPE_CODES.RECORD);
     offset += 1;
 
@@ -207,14 +207,14 @@ export class RecordColumn<T = any> extends BaseColumn<T> {
     // Read header
     const version = view.getUint32(offset, true);
     offset += 4;
-    
+
     if (version !== 1) {
       throw new Error(`Unsupported record column version: ${version}`);
     }
 
     const typeCode = view.getUint8(offset);
     offset += 1;
-    
+
     if (typeCode !== COLUMN_TYPE_CODES.RECORD) {
       throw new Error(`Type code mismatch: expected ${COLUMN_TYPE_CODES.RECORD}, got ${typeCode}`);
     }
@@ -222,7 +222,7 @@ export class RecordColumn<T = any> extends BaseColumn<T> {
     // Read fill list
     const fillListLength = view.getUint32(offset, true);
     offset += 4;
-    
+
     const fillListBytes = new Uint8Array(data.buffer, data.byteOffset + offset, fillListLength);
     this.fillList = BitmapUtils.deserialize(fillListBytes);
     offset += fillListLength;
@@ -234,16 +234,16 @@ export class RecordColumn<T = any> extends BaseColumn<T> {
     for (let i = 0; i < chunkCount; i++) {
       const chunkSize = view.getUint32(offset, true);
       offset += 4;
-      
+
       const chunkBytes = new Uint8Array(data.buffer, data.byteOffset + offset, chunkSize);
       const records = await this.deserializeChunk(chunkBytes);
-      
+
       // Store records in chunk
       const chunk = this.data.getChunk(i);
       for (let j = 0; j < records.length; j++) {
-        chunk[j] = records[j];
+        chunk[j] = records[j]!;
       }
-      
+
       offset += chunkSize;
     }
   }
@@ -259,7 +259,7 @@ export class RecordColumn<T = any> extends BaseColumn<T> {
     return cloned;
   }
 
-  createReader(txnState: TransactionState): RecordColumnReader<T> {
+  override createReader(txnState: TransactionState): RecordColumnReader<T> {
     return new RecordColumnReader(this, txnState);
   }
 
@@ -333,7 +333,7 @@ export class RecordColumn<T = any> extends BaseColumn<T> {
         records[i] = undefined as any;
       } else {
         const recordBytes = new Uint8Array(data.buffer, data.byteOffset + offset, recordSize);
-        
+
         if (this.unmarshaler) {
           records[i] = this.unmarshaler(recordBytes);
         } else {
@@ -377,14 +377,14 @@ export class RecordColumn<T = any> extends BaseColumn<T> {
  * Record column reader for transactions
  */
 export class RecordColumnReader<T = any> extends ColumnReader<T> {
-  private column: RecordColumn<T>;
+  override column: RecordColumn<T>;
 
   constructor(column: RecordColumn<T>, txnState?: TransactionState) {
     super(column, txnState);
     this.column = column;
   }
 
-  getRecord<R = T>(): R | undefined {
+  override getRecord<R = T>(): R | undefined {
     return this.column.data.get(this.getCurrentIndex()) as R | undefined;
   }
 }
@@ -412,7 +412,7 @@ export class RecordColumnAccessor<T = any> implements RecordAccessor<T> {
 
 // Factory function
 export const createRecordColumn = <T = any>(
-  name: string, 
+  name: string,
   options?: {
     marshaler?: (value: T) => Uint8Array;
     unmarshaler?: (data: Uint8Array) => T;

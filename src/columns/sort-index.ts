@@ -508,7 +508,7 @@ export class SortIndexColumn extends BaseColumn<SortIndexItem> {
     }
   }
 
-  clone(): SortIndexColumn {
+  override clone(): SortIndexColumn {
     const cloned = new SortIndexColumn(
       this.name,
       this.targetColumnName,
@@ -564,7 +564,7 @@ export class SortIndexColumn extends BaseColumn<SortIndexItem> {
  * Sort index column reader for transactions
  */
 export class SortIndexColumnReader extends ColumnReader<SortIndexItem> {
-  private column: SortIndexColumn;
+  protected column: SortIndexColumn;
 
   constructor(column: SortIndexColumn, txnState?: TransactionState) {
     super(column, txnState);

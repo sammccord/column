@@ -357,10 +357,12 @@ describe("IndexColumn", () => {
       await column.set(0, entry1);
       await column.set(1, entry2);
 
+      console.log(column.size())
       const cloned = column.clone();
 
       expect(cloned.getName()).toBe(column.getName());
       expect(cloned.getTargetColumn()).toBe(column.getTargetColumn());
+      // console.log(cloned)
       expect(cloned.size()).toBe(column.size());
 
       // Check index mappings are cloned

@@ -1,8 +1,8 @@
 import { describe, test, expect, beforeEach } from "bun:test";
 import { TypedFastBitSet } from 'typedfastbitset';
-import { 
-  RecordColumn, 
-  RecordColumnReader, 
+import {
+  RecordColumn,
+  RecordColumnReader,
   RecordColumnAccessor,
   createRecordColumn,
   Marshaler,
@@ -254,7 +254,7 @@ describe("RecordColumn", () => {
       const obj = new CustomMarshaler("auto-marshal");
 
       await simpleColumn.set(0, obj);
-      
+
       // The implementation should detect the marshal method and use it
       // For this test, we'll just verify the object is stored and retrieved
       const retrieved = await simpleColumn.get(0);
@@ -311,12 +311,12 @@ describe("RecordColumn", () => {
       await customColumn.set(5, obj2);
 
       const serialized = await customColumn.serialize();
-      
+
       const restoredColumn = createRecordColumn<CustomMarshaler>("restored", {
         marshaler: (value) => value.marshal(),
         unmarshaler: (data) => CustomMarshaler.fromBytes(data)
       });
-      
+
       await restoredColumn.deserialize(serialized);
 
       const retrieved1 = await restoredColumn.get(0);
@@ -547,7 +547,7 @@ describe("RecordColumn edge cases", () => {
     }
 
     const column = createRecordColumn<ComplexRecord>("complex");
-    
+
     const record: ComplexRecord = {
       metadata: {
         created: new Date("2023-01-01"),
@@ -587,9 +587,9 @@ describe("RecordColumn edge cases", () => {
     }
 
     // Complex predicate: active users with company email over 25
-    const result = await column.filterRecords((user) => 
-      user.active && 
-      user.email.includes("@company.com") && 
+    const result = await column.filterRecords((user) =>
+      user.active &&
+      user.email.includes("@company.com") &&
       user.age > 25
     );
 
@@ -624,7 +624,7 @@ describe("RecordColumn edge cases", () => {
 
     const parent: CircularRecord = { id: 1, name: "Parent" };
     const child: CircularRecord = { id: 2, name: "Child", parent };
-    
+
     // This should work for storage but may have issues with JSON serialization
     await column.set(0, child);
     const retrieved = await column.get(0);

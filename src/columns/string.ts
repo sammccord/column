@@ -1,6 +1,6 @@
 import { TypedFastBitSet } from 'typedfastbitset';
 import { BaseColumn, ColumnReader } from './base.js';
-import type { 
+import type {
   Reader,
   TransactionState,
   StringAccessor
@@ -118,15 +118,15 @@ export class StringColumn extends BaseColumn<string> {
   async serialize(): Promise<Uint8Array> {
     const chunks = this.getDirtyChunks();
     const fillListBytes = BitmapUtils.serialize(this.fillList);
-    
+
     // Collect all strings and calculate size
     const allStrings: string[][] = [];
     let totalStringLength = 0;
-    
+
     for (const chunkId of chunks) {
       const chunk = this.data.getChunk(chunkId);
       const strings: string[] = [];
-      
+
       for (const str of chunk) {
         if (str !== undefined) {
           if (str === '') {
@@ -137,11 +137,11 @@ export class StringColumn extends BaseColumn<string> {
             totalStringLength += new TextEncoder().encode(str).length;
           }
         } else {
-          strings.push('\x01'); // Use different character to represent undefined  
+          strings.push('\x01'); // Use different character to represent undefined
           totalStringLength += 1;
         }
       }
-      
+
       allStrings.push(strings);
     }
 
@@ -164,7 +164,7 @@ export class StringColumn extends BaseColumn<string> {
     // Write header
     view.setUint32(offset, 1, true); // version
     offset += 4;
-    
+
     view.setUint8(offset, COLUMN_TYPE_CODES.STRING);
     offset += 1;
 
@@ -181,7 +181,7 @@ export class StringColumn extends BaseColumn<string> {
     for (const strings of allStrings) {
       view.setUint32(offset, strings.length, true);
       offset += 4;
-      
+
       for (const str of strings) {
         const strBytes = encoder.encode(str);
         view.setUint32(offset, strBytes.length, true);
@@ -202,14 +202,14 @@ export class StringColumn extends BaseColumn<string> {
     // Read header
     const version = view.getUint32(offset, true);
     offset += 4;
-    
+
     if (version !== 1) {
       throw new Error(`Unsupported string column version: ${version}`);
     }
 
     const typeCode = view.getUint8(offset);
     offset += 1;
-    
+
     if (typeCode !== COLUMN_TYPE_CODES.STRING) {
       throw new Error(`Type code mismatch: expected ${COLUMN_TYPE_CODES.STRING}, got ${typeCode}`);
     }
@@ -217,7 +217,7 @@ export class StringColumn extends BaseColumn<string> {
     // Read fill list
     const fillListLength = view.getUint32(offset, true);
     offset += 4;
-    
+
     const fillListBytes = new Uint8Array(data.buffer, data.byteOffset + offset, fillListLength);
     this.fillList = BitmapUtils.deserialize(fillListBytes);
     offset += fillListLength;
@@ -229,13 +229,13 @@ export class StringColumn extends BaseColumn<string> {
     for (let i = 0; i < chunkCount; i++) {
       const stringCount = view.getUint32(offset, true);
       offset += 4;
-      
+
       const chunk = this.data.getChunk(i);
-      
+
       for (let j = 0; j < stringCount; j++) {
         const strLength = view.getUint32(offset, true);
         offset += 4;
-        
+
         if (strLength > 0) {
           const strBytes = new Uint8Array(data.buffer, data.byteOffset + offset, strLength);
           const str = decoder.decode(strBytes);
@@ -249,7 +249,7 @@ export class StringColumn extends BaseColumn<string> {
         } else {
           chunk[j] = undefined as any; // Zero length means undefined
         }
-        
+
         offset += strLength;
       }
     }
@@ -262,7 +262,7 @@ export class StringColumn extends BaseColumn<string> {
     return cloned;
   }
 
-  createReader(txnState: TransactionState): StringColumnReader {
+  override createReader(txnState: TransactionState): StringColumnReader {
     return new StringColumnReader(this, txnState);
   }
 }
@@ -272,7 +272,7 @@ export class StringColumn extends BaseColumn<string> {
  * Uses hash-based string interning for memory efficiency
  */
 export class EnumColumn extends BaseColumn<number> {
-  private stringMap: HashStringMap;
+  stringMap: HashStringMap;
 
   constructor(name: string, options: Record<string, any> = {}) {
     super(name, 'enum', options);
@@ -342,7 +342,7 @@ export class EnumColumn extends BaseColumn<number> {
   } {
     const stats = this.stringMap.getStats();
     const instances = this.size();
-    
+
     return {
       uniqueStrings: stats.uniqueStrings,
       totalInstances: instances,
@@ -360,7 +360,7 @@ export class EnumColumn extends BaseColumn<number> {
 
     await this.mutex.withLock(async () => {
       const targetIndex = this.stringMap.findOrAdd(value);
-      
+
       for (const index of targetBitmap) {
         const enumIndex = this.data.get(index);
         if (enumIndex === targetIndex) {
@@ -383,7 +383,7 @@ export class EnumColumn extends BaseColumn<number> {
     const chunks = this.getDirtyChunks();
     const fillListBytes = BitmapUtils.serialize(this.fillList);
     const strings = this.stringMap.getStrings();
-    
+
     // Calculate string dictionary size
     const encoder = new TextEncoder();
     let dictSize = 4; // string count
@@ -408,7 +408,7 @@ export class EnumColumn extends BaseColumn<number> {
     // Write header
     view.setUint32(offset, 1, true); // version
     offset += 4;
-    
+
     view.setUint8(offset, COLUMN_TYPE_CODES.ENUM);
     offset += 1;
 
@@ -421,7 +421,7 @@ export class EnumColumn extends BaseColumn<number> {
     // Write string dictionary
     view.setUint32(offset, strings.length, true);
     offset += 4;
-    
+
     for (const str of strings) {
       const strBytes = encoder.encode(str);
       view.setUint32(offset, strBytes.length, true);
@@ -436,7 +436,7 @@ export class EnumColumn extends BaseColumn<number> {
 
     for (const chunkId of chunks) {
       const chunk = this.data.getChunk(chunkId);
-      
+
       for (let i = 0; i < CHUNK_SIZE; i++) {
         const value = chunk[i];
         view.setUint32(offset, value !== undefined ? value : 0xFFFFFFFF, true);
@@ -455,14 +455,14 @@ export class EnumColumn extends BaseColumn<number> {
     // Read header
     const version = view.getUint32(offset, true);
     offset += 4;
-    
+
     if (version !== 1) {
       throw new Error(`Unsupported enum column version: ${version}`);
     }
 
     const typeCode = view.getUint8(offset);
     offset += 1;
-    
+
     if (typeCode !== COLUMN_TYPE_CODES.ENUM) {
       throw new Error(`Type code mismatch: expected ${COLUMN_TYPE_CODES.ENUM}, got ${typeCode}`);
     }
@@ -470,7 +470,7 @@ export class EnumColumn extends BaseColumn<number> {
     // Read fill list
     const fillListLength = view.getUint32(offset, true);
     offset += 4;
-    
+
     const fillListBytes = new Uint8Array(data.buffer, data.byteOffset + offset, fillListLength);
     this.fillList = BitmapUtils.deserialize(fillListBytes);
     offset += fillListLength;
@@ -478,12 +478,12 @@ export class EnumColumn extends BaseColumn<number> {
     // Read string dictionary
     const stringCount = view.getUint32(offset, true);
     offset += 4;
-    
+
     this.stringMap.clear();
     for (let i = 0; i < stringCount; i++) {
       const strLength = view.getUint32(offset, true);
       offset += 4;
-      
+
       const strBytes = new Uint8Array(data.buffer, data.byteOffset + offset, strLength);
       const str = decoder.decode(strBytes);
       this.stringMap.findOrAdd(str); // Rebuild the string map
@@ -496,7 +496,7 @@ export class EnumColumn extends BaseColumn<number> {
 
     for (let i = 0; i < chunkCount; i++) {
       const chunk = this.data.getChunk(i);
-      
+
       for (let j = 0; j < CHUNK_SIZE; j++) {
         const value = view.getUint32(offset, true);
         chunk[j] = value !== 0xFFFFFFFF ? value : undefined;
@@ -527,14 +527,14 @@ export class EnumColumn extends BaseColumn<number> {
  * String column reader for transactions
  */
 export class StringColumnReader extends ColumnReader<string> {
-  private column: StringColumn;
+  override column: StringColumn;
 
   constructor(column: StringColumn, txnState?: TransactionState) {
     super(column, txnState);
     this.column = column;
   }
 
-  getString(): string | undefined {
+  override getString(): string | undefined {
     return this.column.data.get(this.getCurrentIndex());
   }
 }
@@ -543,7 +543,7 @@ export class StringColumnReader extends ColumnReader<string> {
  * Enum column reader for transactions
  */
 export class EnumColumnReader extends ColumnReader<number> {
-  private column: EnumColumn;
+  override column: EnumColumn;
 
   constructor(column: EnumColumn, txnState?: TransactionState) {
     super(column, txnState);
@@ -606,8 +606,8 @@ export class EnumColumnAccessor implements StringAccessor {
 }
 
 // Factory functions
-export const createStringColumn = (name: string, options?: Record<string, any>) => 
+export const createStringColumn = (name: string, options?: Record<string, any>) =>
   new StringColumn(name, options);
 
-export const createEnumColumn = (name: string, options?: Record<string, any>) => 
+export const createEnumColumn = (name: string, options?: Record<string, any>) =>
   new EnumColumn(name, options);

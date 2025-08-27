@@ -1,8 +1,8 @@
 import { TypedFastBitSet } from 'typedfastbitset';
-import type { 
-  ColumnType, 
-  ColumnSchema, 
-  Reader, 
+import type {
+  ColumnType,
+  ColumnSchema,
+  Reader,
   Predicate,
   TransactionState
 } from '../types.js';
@@ -18,7 +18,7 @@ export abstract class BaseColumn<T = any> {
   protected readonly type: ColumnType;
   protected readonly options: Record<string, any>;
   protected readonly mutex: SimpleMutex;
-  protected data: ChunkManager<T>;
+  protected _data: ChunkManager<T>;
   protected fillList: TypedFastBitSet;
   protected isDropped: boolean = false;
 
@@ -27,8 +27,16 @@ export abstract class BaseColumn<T = any> {
     this.type = type;
     this.options = options;
     this.mutex = new SimpleMutex();
-    this.data = new ChunkManager(() => new Array(CHUNK_SIZE));
+    this._data = new ChunkManager(() => new Array(CHUNK_SIZE));
     this.fillList = new TypedFastBitSet();
+  }
+
+  public get data() {
+    return this._data
+  }
+
+  public set data(chunkManager: ChunkManager<T>) {
+    this._data = chunkManager
   }
 
   /**
@@ -209,7 +217,7 @@ export abstract class BaseColumn<T = any> {
     };
   } {
     const chunkStats = this.data.getStats();
-    
+
     return {
       name: this.name,
       type: this.type,
@@ -371,11 +379,11 @@ export class ColumnRegistry {
   async register(column: BaseColumn): Promise<void> {
     await this.mutex.withLock(async () => {
       const name = column.getName();
-      
+
       if (this.columns.has(name)) {
         throw new Error(ERROR_MESSAGES.COLUMN_EXISTS(name));
       }
-      
+
       this.columns.set(name, column);
     });
   }
@@ -417,7 +425,7 @@ export class ColumnRegistry {
       if (!column) {
         return false;
       }
-      
+
       column.drop();
       this.columns.delete(name);
       return true;
@@ -428,7 +436,7 @@ export class ColumnRegistry {
    * Get all column names
    */
   getNames(): string[] {
-    return Array.from(this.columns.keys()).filter(name => 
+    return Array.from(this.columns.keys()).filter(name =>
       !this.columns.get(name)!.isColumnDropped()
     );
   }
@@ -437,7 +445,7 @@ export class ColumnRegistry {
    * Get all columns
    */
   getAll(): BaseColumn[] {
-    return Array.from(this.columns.values()).filter(column => 
+    return Array.from(this.columns.values()).filter(column =>
       !column.isColumnDropped()
     );
   }
@@ -472,7 +480,7 @@ export class ColumnRegistry {
   } {
     const activeColumns = this.getAll();
     const columnStats = activeColumns.map(col => col.getStats());
-    
+
     return {
       columnCount: activeColumns.length,
       totalSize: columnStats.reduce((sum, stats) => sum + stats.size, 0),

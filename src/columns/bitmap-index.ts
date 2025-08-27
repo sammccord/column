@@ -1,6 +1,6 @@
 import { TypedFastBitSet } from 'typedfastbitset';
 import { BaseColumn, ColumnReader } from './base.js';
-import type { 
+import type {
   Reader,
   TransactionState,
   Predicate
@@ -60,17 +60,17 @@ export class IndexColumn extends BaseColumn<IndexEntry> {
 
     // Create index key from value
     const indexKey = this.createIndexKey(value.value);
-    
+
     // Update bitmap for this key - use the bitmap from the IndexEntry
     let bitmap = this.indexMap.get(indexKey);
     if (!bitmap) {
       bitmap = new TypedFastBitSet();
       this.indexMap.set(indexKey, bitmap);
     }
-    
-    // Merge the entry's bitmap into our index bitmap  
+
+    // Merge the entry's bitmap into our index bitmap
     bitmap = BitmapUtils.or(bitmap, value.bitmap);
-    
+
     // Update the map with the new bitmap
     this.indexMap.set(indexKey, bitmap);
   }
@@ -126,11 +126,11 @@ export class IndexColumn extends BaseColumn<IndexEntry> {
    */
   async filterByPredicate(reader: Reader, bitmap?: TypedFastBitSet): Promise<TypedFastBitSet> {
     const result = new TypedFastBitSet();
-    
+
     if (!bitmap) {
       throw new Error('filterByPredicate requires a bitmap parameter to specify which indices to check');
     }
-    
+
     const targetBitmap = bitmap;
 
     await this.mutex.withLock(async () => {
@@ -243,7 +243,7 @@ export class IndexColumn extends BaseColumn<IndexEntry> {
 
       // Merge fill lists and data
       this.fillList = BitmapUtils.or(this.fillList, other.fillList);
-      
+
       for (const index of other.fillList) {
         const value = other.data.get(index);
         if (value) {
@@ -256,11 +256,11 @@ export class IndexColumn extends BaseColumn<IndexEntry> {
   async serialize(): Promise<Uint8Array> {
     const fillListBytes = BitmapUtils.serialize(this.fillList);
     const encoder = new TextEncoder();
-    
+
     // Serialize index mappings
     const mappings = Array.from(this.indexMap.entries());
     let mappingSize = 4; // mapping count
-    
+
     for (const [key, bitmap] of mappings) {
       const keyBytes = encoder.encode(key);
       const bitmapBytes = BitmapUtils.serialize(bitmap);
@@ -286,7 +286,7 @@ export class IndexColumn extends BaseColumn<IndexEntry> {
     // Write header
     view.setUint32(offset, 1, true); // version
     offset += 4;
-    
+
     view.setUint8(offset, COLUMN_TYPE_CODES.INDEX);
     offset += 1;
 
@@ -315,13 +315,13 @@ export class IndexColumn extends BaseColumn<IndexEntry> {
     for (const [key, bitmap] of mappings) {
       const keyBytes = encoder.encode(key);
       const bitmapBytes = BitmapUtils.serialize(bitmap);
-      
+
       // Write key
       view.setUint32(offset, keyBytes.length, true);
       offset += 4;
       new Uint8Array(buffer, offset, keyBytes.length).set(keyBytes);
       offset += keyBytes.length;
-      
+
       // Write bitmap
       view.setUint32(offset, bitmapBytes.length, true);
       offset += 4;
@@ -340,14 +340,14 @@ export class IndexColumn extends BaseColumn<IndexEntry> {
     // Read header
     const version = view.getUint32(offset, true);
     offset += 4;
-    
+
     if (version !== 1) {
       throw new Error(`Unsupported index column version: ${version}`);
     }
 
     const typeCode = view.getUint8(offset);
     offset += 1;
-    
+
     if (typeCode !== COLUMN_TYPE_CODES.INDEX) {
       throw new Error(`Type code mismatch: expected ${COLUMN_TYPE_CODES.INDEX}, got ${typeCode}`);
     }
@@ -385,17 +385,17 @@ export class IndexColumn extends BaseColumn<IndexEntry> {
       const keyBytes = new Uint8Array(data.buffer, data.byteOffset + offset, keyLength);
       const key = decoder.decode(keyBytes);
       offset += keyLength;
-      
+
       // Read bitmap
       const bitmapLength = view.getUint32(offset, true);
       offset += 4;
       const bitmapBytes = new Uint8Array(data.buffer, data.byteOffset + offset, bitmapLength);
       const bitmap = BitmapUtils.deserialize(bitmapBytes);
       offset += bitmapLength;
-      
+
       // Restore mappings
       this.indexMap.set(key, bitmap);
-      
+
       // Restore reverse mappings
       for (const index of bitmap) {
         if (!this.reverseMap.has(index)) {
@@ -412,12 +412,15 @@ export class IndexColumn extends BaseColumn<IndexEntry> {
     for (const [key, bitmap] of this.indexMap) {
       cloned.indexMap.set(key, bitmap.clone());
     }
-    
+
     // Clone reverse maps
     for (const [index, keys] of this.reverseMap.entries()) {
       cloned.reverseMap.set(index, new Set(keys));
     }
-    
+
+    // Clone the fillList
+    cloned.fillList = this.fillList.clone()
+
     return cloned;
   }
 
@@ -548,7 +551,7 @@ export class IndexManager {
    */
   findBestIndex(targetColumn: string, predicate: Predicate): IndexColumn | undefined {
     const candidates = this.getIndexesForColumn(targetColumn);
-    
+
     // Simple heuristic: return the first matching index
     // In a real implementation, this would be more sophisticated
     return candidates.find(index => index.getPredicate() === predicate);

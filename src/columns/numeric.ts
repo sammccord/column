@@ -525,7 +525,7 @@ export class NumericColumnAccessor<T extends NumericType> implements NumericAcce
     const sumValue = this.sum();
     const count = this.txnState.index.size();
     if (count === 0) return 0;
-    
+
     if (typeof sumValue === 'bigint') {
       return Number(sumValue) / count;
     }

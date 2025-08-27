@@ -1,13 +1,13 @@
 import type { TypedFastBitSet } from 'typedfastbitset';
 
 // Core numeric types supported by the column store
-export type NumericType = 
+export type NumericType =
   | 'int8' | 'int16' | 'int32' | 'int64'
   | 'uint8' | 'uint16' | 'uint32' | 'uint64'
   | 'float32' | 'float64';
 
-export type ColumnType = 
-  | NumericType 
+export type ColumnType =
+  | NumericType
   | 'string' | 'enum' | 'boolean' | 'record' | 'key' | 'index' | 'sort-index';
 
 // TypeScript types for numeric values
@@ -175,7 +175,7 @@ export class TransactionError extends ColumnError {
 
 // Utility types for better type safety
 export type ExtractColumnType<T> = T extends { type: infer U } ? U : never;
-export type InferValueType<T extends ColumnType> = 
+export type InferValueType<T extends ColumnType> =
   T extends NumericType ? NumericValue<T> :
   T extends 'string' | 'enum' ? string :
   T extends 'boolean' ? boolean :

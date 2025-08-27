@@ -1,5 +1,5 @@
 import { describe, test, expect } from "bun:test";
-import { 
+import {
   // Column classes
   BaseColumn,
   NumericColumn,
@@ -10,7 +10,7 @@ import {
   KeyColumn,
   IndexColumn,
   SortIndexColumn,
-  
+
   // Readers
   ColumnReader,
   NumericColumnReader,
@@ -21,13 +21,13 @@ import {
   KeyColumnReader,
   IndexColumnReader,
   SortIndexColumnReader,
-  
+
   // Utilities
   KeyColumnUtils,
   SortIndexUtils,
   ColumnRegistry,
   IndexManager,
-  
+
   // Factory functions
   createInt8Column,
   createInt16Column,
@@ -46,10 +46,10 @@ import {
   createKeyColumn,
   createIndexColumn,
   createSortIndexColumn,
-  
+
   // Main factory class
   ColumnFactory,
-  
+
   // Types
   type ColumnSchema,
   type ColumnType,
@@ -119,7 +119,7 @@ describe("Column Exports", () => {
       expect(typeof createUint64Column).toBe("function");
       expect(typeof createFloat32Column).toBe("function");
       expect(typeof createFloat64Column).toBe("function");
-      
+
       // Other column factories
       expect(typeof createStringColumn).toBe("function");
       expect(typeof createEnumColumn).toBe("function");
@@ -213,7 +213,7 @@ describe("ColumnFactory", () => {
     test("should pass options to string columns", () => {
       const stringCol = ColumnFactory.string("test", { option: "value" });
       const enumCol = ColumnFactory.enum("test", { option: "value" });
-      
+
       expect(stringCol.getName()).toBe("test");
       expect(enumCol.getName()).toBe("test");
     });
@@ -271,7 +271,7 @@ describe("ColumnFactory", () => {
     test("should pass unique option to key column", () => {
       const uniqueCol = ColumnFactory.key("unique", { unique: true });
       const nonUniqueCol = ColumnFactory.key("non_unique", { unique: false });
-      
+
       expect(uniqueCol.getName()).toBe("unique");
       expect(nonUniqueCol.getName()).toBe("non_unique");
     });
@@ -281,7 +281,7 @@ describe("ColumnFactory", () => {
     test("should create bitmap index column", () => {
       const predicate = (reader: Reader) => true;
       const column = ColumnFactory.index("test_index", "target_column", predicate);
-      
+
       expect(column).toBeInstanceOf(IndexColumn);
       expect(column.getName()).toBe("test_index");
       expect(column.getType()).toBe("index");
@@ -291,7 +291,7 @@ describe("ColumnFactory", () => {
     test("should create sort index column", () => {
       const keyExtractor = (reader: Reader) => reader.getString() || '';
       const column = ColumnFactory.sortIndex("test_sort", "target_column", keyExtractor);
-      
+
       expect(column).toBeInstanceOf(SortIndexColumn);
       expect(column.getName()).toBe("test_sort");
       expect(column.getType()).toBe("sort-index");
@@ -301,10 +301,10 @@ describe("ColumnFactory", () => {
     test("should pass options to index columns", () => {
       const predicate = (reader: Reader) => true;
       const keyExtractor = (reader: Reader) => reader.getString() || '';
-      
+
       const indexCol = ColumnFactory.index("test_index", "target", predicate, { option: "value" });
       const sortCol = ColumnFactory.sortIndex("test_sort", "target", keyExtractor, { option: "value" });
-      
+
       expect(indexCol.getName()).toBe("test_index");
       expect(sortCol.getName()).toBe("test_sort");
     });
@@ -313,7 +313,7 @@ describe("ColumnFactory", () => {
   describe("convenient sort index factories", () => {
     test("should create string sort index", () => {
       const column = ColumnFactory.stringSortIndex("string_sort", "target");
-      
+
       expect(column).toBeInstanceOf(SortIndexColumn);
       expect(column.getName()).toBe("string_sort");
       expect(column.getTargetColumnName()).toBe("target");
@@ -321,7 +321,7 @@ describe("ColumnFactory", () => {
 
     test("should create numeric sort index", () => {
       const column = ColumnFactory.numericSortIndex("numeric_sort", "target");
-      
+
       expect(column).toBeInstanceOf(SortIndexColumn);
       expect(column.getName()).toBe("numeric_sort");
       expect(column.getTargetColumnName()).toBe("target");
@@ -329,7 +329,7 @@ describe("ColumnFactory", () => {
 
     test("should create date sort index", () => {
       const column = ColumnFactory.dateSortIndex("date_sort", "target");
-      
+
       expect(column).toBeInstanceOf(SortIndexColumn);
       expect(column.getName()).toBe("date_sort");
       expect(column.getTargetColumnName()).toBe("target");
@@ -384,7 +384,7 @@ describe("Column Integration", () => {
     // Test registry
     expect(registry.has("user_ids")).toBe(true);
     expect(registry.getNames()).toHaveLength(6);
-    
+
     const stats = registry.getStats();
     expect(stats.columnCount).toBe(6);
     expect(stats.totalSize).toBe(12); // 2 entries × 6 columns
