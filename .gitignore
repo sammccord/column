@@ -11,3 +11,4 @@ snapshot.bin
 # Vendor and workspace
 vendor/
 go.work
+node_modules
