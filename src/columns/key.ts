@@ -312,7 +312,7 @@ export class KeyColumn extends BaseColumn<string> {
     }
   }
 
-  clone(): KeyColumn {
+  override clone(): KeyColumn {
     const cloned = new KeyColumn(this.name, { ...this.options, unique: this.unique });
     cloned.fillList = this.fillList.clone();
     cloned.data = this.data.clone();
@@ -321,7 +321,7 @@ export class KeyColumn extends BaseColumn<string> {
     return cloned;
   }
 
-  createReader(txnState: TransactionState): KeyColumnReader {
+  override createReader(txnState: TransactionState): KeyColumnReader {
     return new KeyColumnReader(this, txnState);
   }
 
@@ -382,15 +382,19 @@ export class KeyColumn extends BaseColumn<string> {
  * Key column reader for transactions
  */
 export class KeyColumnReader extends ColumnReader<string> {
-  private column: KeyColumn;
+  override column: KeyColumn;
 
   constructor(column: KeyColumn, txnState?: TransactionState) {
     super(column, txnState);
     this.column = column;
   }
 
-  getString(): string | undefined {
-    return this.column.data.get(this.getCurrentIndex());
+  override getString(): string | undefined {
+    const index = this.getCurrentIndex();
+    if (!this.column.contains(index)) {
+      return undefined;
+    }
+    return (this.column as any).data.get(index);
   }
 
   /**

@@ -1,5 +1,4 @@
 import type { TypedFastBitSet } from 'typedfastbitset';
-import type BTree from 'sorted-btree';
 
 // Core numeric types supported by the column store
 export type NumericType = 
@@ -30,6 +29,8 @@ export interface Reader {
   getFloat(): number | undefined;
   getBoolean(): boolean | undefined;
   getRecord<T>(): T | undefined;
+  setIndex(index: number): void;
+  getRaw?(): Promise<any>;
 }
 
 // Row interface for setting column values

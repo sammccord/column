@@ -3,9 +3,7 @@ import type {
   ColumnType, 
   ColumnSchema, 
   Reader, 
-  Row, 
   Predicate,
-  ChunkMetadata,
   TransactionState
 } from '../types.js';
 import { ChunkManager, ChunkUtils } from '../utils/chunk.js';
@@ -150,7 +148,7 @@ export abstract class BaseColumn<T = any> {
    */
   async filter(predicate: Predicate): Promise<TypedFastBitSet> {
     const result = new TypedFastBitSet();
-    const reader = this.createReader();
+    const reader = this.createReader({} as TransactionState);
 
     await this.mutex.withLock(async () => {
       for (const index of this.fillList) {
@@ -307,13 +305,11 @@ export abstract class BaseColumn<T = any> {
  * Column reader implementation for transaction support
  */
 export class ColumnReader<T = any> implements Reader {
-  private column: BaseColumn<T>;
+  protected column: BaseColumn<T>;
   private currentIndex: number = 0;
-  private txnState?: TransactionState;
 
-  constructor(column: BaseColumn<T>, txnState?: TransactionState) {
+  constructor(column: BaseColumn<T>, _txnState?: TransactionState) {
     this.column = column;
-    this.txnState = txnState;
   }
 
   setIndex(index: number): void {

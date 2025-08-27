@@ -169,21 +169,21 @@ export class BooleanColumn extends BaseColumn<boolean> {
     offset += trueBitsLength;
   }
 
-  clone(): BooleanColumn {
+  override clone(): BooleanColumn {
     const cloned = new BooleanColumn(this.name, this.options);
     cloned.fillList = this.fillList.clone();
     cloned.trueBits = this.trueBits.clone();
     return cloned;
   }
 
-  createReader(txnState: TransactionState): BooleanColumnReader {
+  override createReader(txnState: TransactionState): BooleanColumnReader {
     return new BooleanColumnReader(this, txnState);
   }
 
   /**
    * Get memory usage statistics
    */
-  getStats(): ReturnType<BaseColumn['getStats']> & {
+  override getStats(): ReturnType<BaseColumn['getStats']> & {
     trueCount: number;
     falseCount: number;
     trueFillRatio: number;
@@ -205,19 +205,19 @@ export class BooleanColumn extends BaseColumn<boolean> {
  * Boolean column reader for transactions
  */
 export class BooleanColumnReader extends ColumnReader<boolean> {
-  private column: BooleanColumn;
+  override column: BooleanColumn;
 
   constructor(column: BooleanColumn, txnState?: TransactionState) {
     super(column, txnState);
     this.column = column;
   }
 
-  getBoolean(): boolean | undefined {
+  override getBoolean(): boolean | undefined {
     const index = this.getCurrentIndex();
-    if (!this.column.fillList.has(index)) {
+    if (!this.column.getFillList().has(index)) {
       return undefined;
     }
-    return this.column.trueBits.has(index);
+    return (this.column as any).trueBits.has(index);
   }
 }
 
@@ -234,10 +234,10 @@ export class BooleanColumnAccessor implements BooleanAccessor {
   }
 
   get(): boolean | undefined {
-    if (!this.column.fillList.has(this.txnState.cursor)) {
+    if (!this.column.getFillList().has(this.txnState.cursor)) {
       return undefined;
     }
-    return this.column.trueBits.has(this.txnState.cursor);
+    return (this.column as any).trueBits.has(this.txnState.cursor);
   }
 
   name(): string {

@@ -69,11 +69,11 @@ export class ChunkUtils {
   static getIntersectingChunks(startIndex: number, endIndex: number): number[] {
     const range = this.chunkRange(startIndex, endIndex);
     const chunks: number[] = [];
-    
+
     for (let chunkId = range.start; chunkId <= range.end; chunkId++) {
       chunks.push(chunkId);
     }
-    
+
     return chunks;
   }
 
@@ -81,8 +81,8 @@ export class ChunkUtils {
    * Calculate the intersection of a chunk with an index range
    */
   static chunkIntersection(
-    chunkId: number, 
-    rangeStart: number, 
+    chunkId: number,
+    rangeStart: number,
     rangeEnd: number
   ): { localStart: number; localEnd: number; globalStart: number; globalEnd: number } | null {
     const chunkStart = this.chunkStart(chunkId);
@@ -144,10 +144,10 @@ export class ChunkManager<T> {
   set(index: number, value: T): void {
     const chunkId = ChunkUtils.chunkAt(index);
     const localIndex = ChunkUtils.localIndex(index);
-    
+
     const chunk = this.getChunk(chunkId);
     chunk[localIndex] = value;
-    
+
     // Mark chunk as dirty
     this.metadata[chunkId].isDirty = true;
   }
@@ -158,7 +158,7 @@ export class ChunkManager<T> {
   get(index: number): T | undefined {
     const chunkId = ChunkUtils.chunkAt(index);
     const localIndex = ChunkUtils.localIndex(index);
-    
+
     if (chunkId >= this.chunks.length) {
       return undefined;
     }
@@ -222,7 +222,7 @@ export class ChunkManager<T> {
     callback: (chunk: T[], chunkId: number, metadata: ChunkMetadata) => void
   ): void {
     const chunkIds = ChunkUtils.getIntersectingChunks(startIndex, endIndex);
-    
+
     for (const chunkId of chunkIds) {
       const chunk = this.getChunk(chunkId);
       const metadata = this.getMetadata(chunkId);
@@ -238,7 +238,7 @@ export class ChunkManager<T> {
     while (this.chunks.length > 0) {
       const lastChunk = this.chunks[this.chunks.length - 1];
       const isEmpty = lastChunk.every(value => value === undefined || value === null);
-      
+
       if (isEmpty) {
         this.chunks.pop();
         this.metadata.pop();
@@ -258,7 +258,7 @@ export class ChunkManager<T> {
     dirtyChunks: number;
   } {
     const dirtyCount = this.getDirtyChunks().length;
-    
+
     return {
       chunkCount: this.chunks.length,
       totalCapacity: this.chunks.length * CHUNK_SIZE,
@@ -280,13 +280,13 @@ export class ChunkManager<T> {
    */
   clone(): ChunkManager<T> {
     const cloned = new ChunkManager(this.createChunk);
-    
+
     // Deep clone chunks
     for (let i = 0; i < this.chunks.length; i++) {
       cloned.chunks[i] = [...this.chunks[i]];
       cloned.metadata[i] = { ...this.metadata[i] };
     }
-    
+
     return cloned;
   }
 }

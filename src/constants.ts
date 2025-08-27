@@ -95,6 +95,9 @@ export const PERFORMANCE = {
   LARGE_BUFFER_SIZE: 4096,
 } as const;
 
+// Export individual constants for convenience
+export const STRING_INTERN_THRESHOLD = PERFORMANCE.STRING_INTERN_THRESHOLD;
+
 // Feature flags
 export const FEATURES = {
   ENABLE_SIMD: true,

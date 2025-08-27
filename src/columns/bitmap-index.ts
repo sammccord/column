@@ -406,13 +406,10 @@ export class IndexColumn extends BaseColumn<IndexEntry> {
     }
   }
 
-  clone(): IndexColumn {
+  override clone(): IndexColumn {
     const cloned = new IndexColumn(this.name, this.targetColumnName, this.predicate, this.options);
-    cloned.fillList = this.fillList.clone();
-    cloned.data = this.data.clone();
-    
-    // Clone index maps
-    for (const [key, bitmap] of this.indexMap.entries()) {
+    // Deep copy the index maps
+    for (const [key, bitmap] of this.indexMap) {
       cloned.indexMap.set(key, bitmap.clone());
     }
     
@@ -424,7 +421,7 @@ export class IndexColumn extends BaseColumn<IndexEntry> {
     return cloned;
   }
 
-  createReader(txnState: TransactionState): IndexColumnReader {
+  override createReader(txnState: TransactionState): IndexColumnReader {
     return new IndexColumnReader(this, txnState);
   }
 
@@ -467,14 +464,17 @@ export class IndexColumn extends BaseColumn<IndexEntry> {
   /**
    * Extract value from reader using predicate context
    */
-  private extractValue(reader: Reader): any {
+  private async extractValue(reader: Reader): Promise<any> {
     // This is a simplified extraction - in a real implementation,
     // this would need to be more sophisticated based on the predicate
     try {
-      return reader.getRaw();
+      if (reader.getRaw) {
+        return await reader.getRaw();
+      }
     } catch {
-      return reader.getString() || reader.getInt() || reader.getFloat() || reader.getBoolean();
+      // Fall through to other getters
     }
+    return reader.getString() || reader.getInt() || reader.getFloat() || reader.getBoolean();
   }
 }
 
@@ -482,24 +482,24 @@ export class IndexColumn extends BaseColumn<IndexEntry> {
  * Index column reader for transactions
  */
 export class IndexColumnReader extends ColumnReader<IndexEntry> {
-  private column: IndexColumn;
+  override column: IndexColumn;
 
   constructor(column: IndexColumn, txnState?: TransactionState) {
     super(column, txnState);
     this.column = column;
   }
 
-  getIndexEntry(): IndexEntry | undefined {
-    return this.column.data.get(this.getCurrentIndex());
+  async getIndexEntry(): Promise<IndexEntry | undefined> {
+    return await this.column.get(this.getCurrentIndex());
   }
 
-  getValue(): any {
-    const entry = this.getIndexEntry();
+  async getValue(): Promise<any> {
+    const entry = await this.getIndexEntry();
     return entry?.value;
   }
 
-  getBitmap(): TypedFastBitSet | undefined {
-    const entry = this.getIndexEntry();
+  async getBitmap(): Promise<TypedFastBitSet | undefined> {
+    const entry = await this.getIndexEntry();
     return entry?.bitmap;
   }
 }

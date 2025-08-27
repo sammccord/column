@@ -269,10 +269,12 @@ export class NumericColumn<T extends NumericType> extends BaseColumn<NumericValu
 
     for (let i = 0; i < chunks.length; i++) {
       const bytes = chunkData[i];
-      view.setUint32(offset, bytes.length, true);
-      offset += 4;
-      new Uint8Array(buffer, offset, bytes.length).set(bytes);
-      offset += bytes.length;
+      if (bytes) {
+        view.setUint32(offset, bytes.length, true);
+        offset += 4;
+        new Uint8Array(buffer, offset, bytes.length).set(bytes);
+        offset += bytes.length;
+      }
     }
 
     return new Uint8Array(buffer);
@@ -320,21 +322,24 @@ export class NumericColumn<T extends NumericType> extends BaseColumn<NumericValu
       const chunkId = i; // Simplified - in production you'd store chunk IDs
       const chunk = this.data.getChunk(chunkId);
       for (let j = 0; j < chunkData.length; j++) {
-        chunk[j] = chunkData[j];
+        const value = chunkData[j];
+        if (value !== undefined) {
+          chunk[j] = value;
+        }
       }
 
       offset += chunkSize;
     }
   }
 
-  clone(): NumericColumn<T> {
+  override clone(): NumericColumn<T> {
     const cloned = new NumericColumn(this.name, this.numericType, this.options);
     cloned.fillList = this.fillList.clone();
     cloned.data = this.data.clone();
     return cloned;
   }
 
-  createReader(txnState: TransactionState): NumericColumnReader<T> {
+  override createReader(txnState: TransactionState): NumericColumnReader<T> {
     return new NumericColumnReader(this, txnState);
   }
 
@@ -433,37 +438,49 @@ export class NumericColumn<T extends NumericType> extends BaseColumn<NumericValu
  * Numeric column reader for transactions
  */
 export class NumericColumnReader<T extends NumericType> extends ColumnReader<NumericValue<T>> {
-  private column: NumericColumn<T>;
+  override column: NumericColumn<T>;
 
   constructor(column: NumericColumn<T>, txnState?: TransactionState) {
     super(column, txnState);
     this.column = column;
   }
 
-  getInt(): number | undefined {
+  override getInt(): number | undefined {
+    const index = this.getCurrentIndex();
+    if (!this.column.contains(index)) {
+      return undefined;
+    }
     if (this.column.is64Bit()) {
-      const value = this.column.data.get(this.getCurrentIndex()) as bigint | undefined;
+      const value = (this.column as any).data.get(index) as bigint | undefined;
       return value !== undefined ? Number(value) : undefined;
     } else {
-      return this.column.data.get(this.getCurrentIndex()) as number | undefined;
+      return (this.column as any).data.get(index) as number | undefined;
     }
   }
 
-  getBigInt(): bigint | undefined {
+  override getBigInt(): bigint | undefined {
+    const index = this.getCurrentIndex();
+    if (!this.column.contains(index)) {
+      return undefined;
+    }
     if (this.column.is64Bit()) {
-      return this.column.data.get(this.getCurrentIndex()) as bigint | undefined;
+      return (this.column as any).data.get(index) as bigint | undefined;
     } else {
-      const value = this.column.data.get(this.getCurrentIndex()) as number | undefined;
+      const value = (this.column as any).data.get(index) as number | undefined;
       return value !== undefined ? BigInt(value) : undefined;
     }
   }
 
-  getFloat(): number | undefined {
+  override getFloat(): number | undefined {
+    const index = this.getCurrentIndex();
+    if (!this.column.contains(index)) {
+      return undefined;
+    }
     if (this.column.is64Bit()) {
-      const value = this.column.data.get(this.getCurrentIndex()) as bigint | undefined;
+      const value = (this.column as any).data.get(index) as bigint | undefined;
       return value !== undefined ? Number(value) : undefined;
     } else {
-      return this.column.data.get(this.getCurrentIndex()) as number | undefined;
+      return (this.column as any).data.get(index) as number | undefined;
     }
   }
 }
@@ -481,24 +498,64 @@ export class NumericColumnAccessor<T extends NumericType> implements NumericAcce
   }
 
   get(): NumericValue<T> | undefined {
-    const value = this.column.data.get(this.txnState.cursor);
+    const value = (this.column as any).data.get(this.txnState.cursor);
     return value;
   }
 
-  async sum(): Promise<NumericValue<T>> {
-    return this.column.sum(this.txnState.index);
+  sum(): NumericValue<T> {
+    // For synchronous implementation, we'll calculate inline
+    // In a real implementation, this might use cached aggregates
+    let sum = this.column.isFloatingPoint() ? 0 : (this.column.is64Bit() ? 0n : 0);
+    for (const index of this.txnState.index) {
+      const value = (this.column as any).data.get(index);
+      if (value !== undefined) {
+        if (this.column.isFloatingPoint()) {
+          sum = (sum as number) + (value as number);
+        } else if (this.column.is64Bit()) {
+          sum = (sum as bigint) + (value as bigint);
+        } else {
+          sum = (sum as number) + (value as number);
+        }
+      }
+    }
+    return sum as NumericValue<T>;
   }
 
-  async avg(): Promise<number> {
-    return this.column.avg(this.txnState.index);
+  avg(): number {
+    const sumValue = this.sum();
+    const count = this.txnState.index.size();
+    if (count === 0) return 0;
+    
+    if (typeof sumValue === 'bigint') {
+      return Number(sumValue) / count;
+    }
+    return (sumValue as number) / count;
   }
 
-  async min(): Promise<NumericValue<T> | undefined> {
-    return this.column.min(this.txnState.index);
+  min(): NumericValue<T> | undefined {
+    let min: NumericValue<T> | undefined = undefined;
+    for (const index of this.txnState.index) {
+      const value = (this.column as any).data.get(index) as NumericValue<T>;
+      if (value !== undefined) {
+        if (min === undefined || value < min) {
+          min = value;
+        }
+      }
+    }
+    return min;
   }
 
-  async max(): Promise<NumericValue<T> | undefined> {
-    return this.column.max(this.txnState.index);
+  max(): NumericValue<T> | undefined {
+    let max: NumericValue<T> | undefined = undefined;
+    for (const index of this.txnState.index) {
+      const value = (this.column as any).data.get(index) as NumericValue<T>;
+      if (value !== undefined) {
+        if (max === undefined || value > max) {
+          max = value;
+        }
+      }
+    }
+    return max;
   }
 
   name(): string {
